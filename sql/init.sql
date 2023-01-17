@@ -1,0 +1,13 @@
+CREATE DATABASE IF NOT EXISTS `bbs`;
+USE bbs;
+
+CREATE TABLE IF NOT EXISTS `bbs`.`user`
+(
+    `id` MEDIUMINT NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NOT NULL UNIQUE,
+    `password` VARCHAR(255) NOT NULL,
+    `created_at` DATETIME NOT NULL,
+    `updated_at` DATETIME NOT NULL,
+    PRIMARY KEY (id)
+);

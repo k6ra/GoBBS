@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${DB_USER}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      TZ: "Asia/Tokyo"
+  app:
+    build: .
+    depends_on:
+      - db
+    volumes:
+      - ./:/go/src/app
+    ports:
+      - 8100:8100
+    environment:
+      DB_HOST: mysql
+      DB_NAME: "${DB_NAME}"
+      DB_USER: "${DB_USER}"
+      DB_PASSWORD: "${DB_PASSWORD}"
