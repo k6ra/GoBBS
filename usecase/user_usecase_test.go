@@ -4,6 +4,7 @@ import (
 	"GoBBS/domain/model"
 	"GoBBS/domain/service"
 	"GoBBS/dto"
+	"GoBBS/mock/mock_model"
 	"GoBBS/mock/mock_service"
 	"database/sql"
 	"errors"
@@ -127,7 +128,7 @@ func Test_userUseCase_Authorize(t *testing.T) {
 		name    string
 		uc      *userUseCase
 		args    args
-		want    *model.User
+		want    model.User
 		wantErr bool
 	}{
 		{
@@ -144,10 +145,7 @@ func Test_userUseCase_Authorize(t *testing.T) {
 				}(),
 				userServiceFactory: func() *mock_service.MockUserFactory {
 					svc := mock_service.NewMockUser(ctrl)
-					svc.EXPECT().Authorize(gomock.Any(), gomock.Any()).Return(
-						model.NewUser("id", "name", "email", "password"),
-						nil,
-					)
+					svc.EXPECT().Authorize(gomock.Any(), gomock.Any()).Return(mock_model.NewMockUser(ctrl), nil)
 
 					mock := mock_service.NewMockUserFactory(ctrl)
 					mock.EXPECT().NewUserService(gomock.Any()).Return(svc)
@@ -158,7 +156,7 @@ func Test_userUseCase_Authorize(t *testing.T) {
 				email:    "email",
 				password: "password",
 			},
-			want:    model.NewUser("id", "name", "email", "password"),
+			want:    mock_model.NewMockUser(ctrl),
 			wantErr: false,
 		},
 		{

@@ -2,6 +2,7 @@ package dao
 
 import (
 	"GoBBS/domain/model"
+	"GoBBS/mock/mock_model"
 	"database/sql"
 	"errors"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/golang/mock/gomock"
 )
 
 func TestNewUserDAO(t *testing.T) {
@@ -52,11 +54,11 @@ func TestUserDAO_FindByEmailSuccess(t *testing.T) {
 		t.Fatalf("txの生成に失敗(error: %s)", err)
 	}
 
-	mock.ExpectQuery("select id, name, email, password from user where email = ?").
+	mock.ExpectQuery("select id, name, email, password, salt from user where email = ?").
 		WithArgs("email").
 		WillReturnRows(
-			sqlmock.NewRows([]string{"id", "name", "email", "password"}).
-				AddRow("1", "example 1", "email@email.com", "examplepas")).
+			sqlmock.NewRows([]string{"id", "name", "email", "password", "salt"}).
+				AddRow("1", "example 1", "email@email.com", "examplepas", "salt")).
 		RowsWillBeClosed()
 
 	dao := NewUserDAO(tx)
@@ -65,7 +67,7 @@ func TestUserDAO_FindByEmailSuccess(t *testing.T) {
 		t.Errorf("予期せぬエラー(error: %s)", err)
 	}
 
-	want := model.NewUser("1", "example 1", "email@email.com", "examplepas")
+	want := model.NewUser("1", "example 1", "email@email.com", "examplepas", "salt")
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("戻り値不一致 got: %#v want: %#v", got, want)
 	}
@@ -88,7 +90,7 @@ func TestUserDAO_FindByEmailNotFound(t *testing.T) {
 		t.Fatalf("txの生成に失敗(error: %s)", err)
 	}
 
-	mock.ExpectQuery("select id, name, email, password from user where email = ?").
+	mock.ExpectQuery("select id, name, email, password, salt from user where email = ?").
 		WithArgs("email").
 		WillReturnRows(
 			sqlmock.NewRows([]string{"id", "name", "email", "password"})).
@@ -122,7 +124,7 @@ func TestUserDAO_FindByEmailScanFail(t *testing.T) {
 		t.Fatalf("txの生成に失敗(error: %s", err)
 	}
 
-	mock.ExpectQuery("select id, name, email, password from user where email = ?").
+	mock.ExpectQuery("select id, name, email, password, salt from user where email = ?").
 		WithArgs("email").
 		WillReturnRows(
 			sqlmock.NewRows([]string{"id", "name", "email", "password"}).
@@ -158,7 +160,7 @@ func TestUserDAO_FindByEmailQueryFail(t *testing.T) {
 		t.Fatalf("txの生成に失敗(error: %s", err)
 	}
 
-	mock.ExpectQuery("select id, name, email, password from user where email = ?").
+	mock.ExpectQuery("select id, name, email, password, salt from user where email = ?").
 		WithArgs("email").
 		WillReturnError(errors.New("ng"))
 
@@ -192,18 +194,25 @@ func TestUserDAO_RegistSuccess(t *testing.T) {
 
 	now := time.Now()
 	mock.ExpectPrepare(`
-		insert into user (email, name, password, created_at, updated_at)
-		values(?, ?, ?, ?, ?)
+		insert into user (email, name, password, salt, created_at, updated_at)
+		values(?, ?, ?, ?, ?, ?)
 	`).
 		WillBeClosed()
 
-	mock.ExpectExec("insert into user (email, name, password, created_at, updated_at) values(?, ?, ?, ?, ?)").
-		WithArgs("email@email.com", "example 1", "examplepas", now, now).
+	mock.ExpectExec("insert into user (email, name, password, salt, created_at, updated_at) values(?, ?, ?, ?, ?, ?)").
+		WithArgs("email@email.com", "example 1", "examplepas", "examplesalt", now, now).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("", "example 1", "email@email.com", "examplepas")
-	err = dao.Regist(user, now)
+	mockUser := mock_model.NewMockUser(ctrl)
+	gomock.InOrder(
+		mockUser.EXPECT().EncryptPassword().Return("examplepas", "examplesalt", nil),
+		mockUser.EXPECT().Email().Return("email@email.com"),
+		mockUser.EXPECT().Name().Return("example 1"),
+	)
+	err = dao.Regist(mockUser, now)
 	if err != nil {
 		t.Errorf("予期せぬエラー(error: %s)", err)
 	}
@@ -228,18 +237,26 @@ func TestUserDAO_RegistInsertFail(t *testing.T) {
 
 	now := time.Now()
 	mock.ExpectPrepare(`
-		insert into user (email, name, password, created_at, updated_at)
-		values(?, ?, ?, ?, ?)
+		insert into user (email, name, password, salt, created_at, updated_at)
+		values(?, ?, ?, ?, ?, ?)
 	`).
 		WillBeClosed()
 
-	mock.ExpectExec("insert into user (email, name, password, created_at, updated_at) values(?, ?, ?, ?, ?)").
-		WithArgs("email@email.com", "example 1", "examplepas", now, now).
+	mock.ExpectExec("insert into user (email, name, password, salt, created_at, updated_at) values(?, ?, ?, ?, ?, ?)").
+		WithArgs("email@email.com", "example 1", "examplepas", "examplesalt", now, now).
 		WillReturnError(errors.New("ng"))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("", "example 1", "email@email.com", "examplepas")
-	err = dao.Regist(user, now)
+	mockUser := mock_model.NewMockUser(ctrl)
+	gomock.InOrder(
+		mockUser.EXPECT().EncryptPassword().Return("examplepas", "examplesalt", nil),
+		mockUser.EXPECT().Email().Return("email@email.com"),
+		mockUser.EXPECT().Name().Return("example 1"),
+	)
+
+	err = dao.Regist(mockUser, now)
 	if err == nil {
 		t.Error("予期せぬ正常終了")
 	}
@@ -264,14 +281,17 @@ func TestUserDAO_RegistPrepareFail(t *testing.T) {
 
 	now := time.Now()
 	mock.ExpectPrepare(`
-		insert into user (email, name, password, created_at, updated_at)
-		values(?, ?, ?, ?, ?)
+		insert into user (email, name, password, salt, created_at, updated_at)
+		values(?, ?, ?, ?, ?, ?)
 	`).
 		WillReturnError(errors.New("ng"))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("", "example 1", "email@email.com", "examplepas")
-	err = dao.Regist(user, now)
+	mockUser := mock_model.NewMockUser(ctrl)
+
+	err = dao.Regist(mockUser, now)
 	if err == nil {
 		t.Error("予期せぬ正常終了")
 	}
@@ -307,9 +327,18 @@ func TestUserDAO_UpdateSuccess(t *testing.T) {
 		WithArgs("example 1", "examplepas", now, "1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("1", "example 1", "email@email.com", "examplepas")
-	err = dao.Update(user, now)
+	mockUser := mock_model.NewMockUser(ctrl)
+	gomock.InOrder(
+		mockUser.EXPECT().ID().Return("1"),
+		mockUser.EXPECT().Name().Return("example 1"),
+		mockUser.EXPECT().Password().Return("examplepas"),
+		mockUser.EXPECT().ID().Return("1"),
+	)
+
+	err = dao.Update(mockUser, now)
 	if err != nil {
 		t.Errorf("予期せぬエラー(error: %s)", err)
 	}
@@ -345,9 +374,18 @@ func TestUserDAO_UpdateFail(t *testing.T) {
 		WithArgs("example 1", "examplepas", now, "1").
 		WillReturnError(errors.New("ng"))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("1", "example 1", "email@email.com", "examplepas")
-	err = dao.Update(user, now)
+	mockUser := mock_model.NewMockUser(ctrl)
+	gomock.InOrder(
+		mockUser.EXPECT().ID().Return("1"),
+		mockUser.EXPECT().Name().Return("example 1"),
+		mockUser.EXPECT().Password().Return("examplepas"),
+		mockUser.EXPECT().ID().Return("1"),
+	)
+
+	err = dao.Update(mockUser, now)
 	if err == nil {
 		t.Errorf("予期せぬ正常終了")
 	}
@@ -378,10 +416,14 @@ func TestUserDAO_UpdatePrepareFail(t *testing.T) {
 	mock.ExpectPrepare(`update user set name = ?, password = ?, updated_at = ? where id = ?`).
 		WillReturnError(errors.New("ng"))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("1", "example 1", "email@email.com", "examplepas")
+	mockUser := mock_model.NewMockUser(ctrl)
+	mockUser.EXPECT().ID().Return("1")
+
 	now := time.Now()
-	err = dao.Update(user, now)
+	err = dao.Update(mockUser, now)
 	if err == nil {
 		t.Errorf("予期せぬ正常終了")
 	}
@@ -407,10 +449,14 @@ func TestUserDAO_UpdateQueryFail(t *testing.T) {
 	mock.ExpectQuery("select id, name, email, password from user where id = ? for update").
 		WillReturnError(errors.New("ng"))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("1", "example 1", "email@email.com", "examplepas")
+	mockUser := mock_model.NewMockUser(ctrl)
+	mockUser.EXPECT().ID().Return("1")
+
 	now := time.Now()
-	err = dao.Update(user, now)
+	err = dao.Update(mockUser, now)
 	if err == nil {
 		t.Errorf("予期せぬ正常終了")
 	}
@@ -439,9 +485,13 @@ func TestUserDAO_DeleteSuccess(t *testing.T) {
 		WithArgs("1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("1", "example 1", "email@email.com", "examplepas")
-	err = dao.Delete(user)
+	mockUser := mock_model.NewMockUser(ctrl)
+	mockUser.EXPECT().ID().Return("1")
+
+	err = dao.Delete(mockUser)
 	if err != nil {
 		t.Errorf("予期せぬエラー(error: %s)", err)
 	}
@@ -471,9 +521,13 @@ func TestUserDAO_DeleteFail(t *testing.T) {
 		WithArgs("1").
 		WillReturnError(errors.New("ng"))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("1", "example 1", "email@email.com", "examplepas")
-	err = dao.Delete(user)
+	mockUser := mock_model.NewMockUser(ctrl)
+	mockUser.EXPECT().ID().Return("1")
+
+	err = dao.Delete(mockUser)
 	if err == nil {
 		t.Errorf("予期せぬ正常終了")
 	}
@@ -499,9 +553,12 @@ func TestUserDAO_DeletePrepareFail(t *testing.T) {
 	mock.ExpectPrepare(`delete from user where id = ?`).
 		WillReturnError(errors.New("ng"))
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	dao := NewUserDAO(tx)
-	user := model.NewUser("1", "example 1", "email@email.com", "examplepas")
-	err = dao.Delete(user)
+	mockUser := mock_model.NewMockUser(ctrl)
+
+	err = dao.Delete(mockUser)
 	if err == nil {
 		t.Errorf("予期せぬ正常終了")
 	}

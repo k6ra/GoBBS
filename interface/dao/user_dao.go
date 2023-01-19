@@ -7,6 +7,8 @@ import (
 	"GoBBS/domain/model"
 	"GoBBS/domain/repository"
 	"GoBBS/dto"
+
+	"github.com/pkg/errors"
 )
 
 // UserDAO ユーザーDAO
@@ -24,17 +26,17 @@ func NewUserDAO(tx *sql.Tx) *UserDAO {
 }
 
 // FindByEmail メールアドレスを指定してユーザーを取得する
-func (u *UserDAO) FindByEmail(email string) (*model.User, error) {
-	rows, err := u.tx.Query("select id, name, email, password from user where email = ?", email)
+func (u *UserDAO) FindByEmail(email string) (model.User, error) {
+	rows, err := u.tx.Query("select id, name, email, password, salt from user where email = ?", email)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "FindByEmail error")
 	}
 	defer rows.Close()
 
 	var user dto.User
 	if rows.Next() {
-		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Password); err != nil {
-			return nil, err
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.Salt); err != nil {
+			return nil, errors.Wrap(err, "FindByEmail error")
 		}
 		return user.MapUserModel(), nil
 	}
@@ -42,40 +44,45 @@ func (u *UserDAO) FindByEmail(email string) (*model.User, error) {
 }
 
 // Regist ユーザーを登録する
-func (u *UserDAO) Regist(user *model.User, now time.Time) error {
+func (u *UserDAO) Regist(user model.User, now time.Time) error {
 	stmt, err := u.tx.Prepare(`
-		insert into user (email, name, password, created_at, updated_at)
-		values(?, ?, ?, ?, ?)
+		insert into user (email, name, password, salt, created_at, updated_at)
+		values(?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Regist error")
 	}
 	defer stmt.Close()
 
+	cryptPw, salt, err := user.EncryptPassword()
+	if err != nil {
+		return errors.Wrap(err, "Regist error")
+	}
 	if _, err = stmt.Exec(
 		user.Email(),
 		user.Name(),
-		user.Password(),
+		cryptPw,
+		salt,
 		now,
 		now,
 	); err != nil {
-		return err
+		return errors.Wrap(err, "Regist error")
 	}
 
 	return nil
 }
 
 // Update ユーザーを更新する
-func (u *UserDAO) Update(user *model.User, now time.Time) error {
+func (u *UserDAO) Update(user model.User, now time.Time) error {
 	rows, err := u.tx.Query("select id, name, email, password from user where id = ? for update", user.ID())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Update error")
 	}
 	defer rows.Close()
 
 	stmt, err := u.tx.Prepare("update user set name = ?, password = ?, updated_at = ? where id = ?")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Update error")
 	}
 	defer stmt.Close()
 
@@ -85,24 +92,24 @@ func (u *UserDAO) Update(user *model.User, now time.Time) error {
 		now,
 		user.ID(),
 	); err != nil {
-		return err
+		return errors.Wrap(err, "Update error")
 	}
 
 	return nil
 }
 
 // Delete ユーザーを削除する
-func (u *UserDAO) Delete(user *model.User) error {
+func (u *UserDAO) Delete(user model.User) error {
 	stmt, err := u.tx.Prepare("delete from user where id = ?")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Delete error")
 	}
 	defer stmt.Close()
 
 	if _, err := stmt.Exec(
 		user.ID(),
 	); err != nil {
-		return err
+		return errors.Wrap(err, "Delete error")
 	}
 
 	return nil

@@ -8,4 +8,7 @@ require (
 	github.com/golang/mock v1.6.0
 )
 
-require github.com/pkg/errors v0.9.1 // indirect
+require (
+	github.com/pkg/errors v0.9.1 // indirect
+	golang.org/x/crypto v0.5.0 // indirect
+)

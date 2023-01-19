@@ -37,10 +37,10 @@ func (m *MockUser) EXPECT() *MockUserMockRecorder {
 }
 
 // Authorize mocks base method.
-func (m *MockUser) Authorize(email, password string) (*model.User, error) {
+func (m *MockUser) Authorize(email, password string) (model.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Authorize", email, password)
-	ret0, _ := ret[0].(*model.User)
+	ret0, _ := ret[0].(model.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

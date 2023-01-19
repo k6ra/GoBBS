@@ -2,13 +2,19 @@ package dto
 
 import (
 	"GoBBS/domain/model"
+	"GoBBS/mock/mock_model"
 	"reflect"
 	"testing"
+
+	"github.com/golang/mock/gomock"
 )
 
 func TestNewUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	type args struct {
-		user *model.User
+		user model.User
 	}
 	tests := []struct {
 		name string
@@ -18,13 +24,24 @@ func TestNewUser(t *testing.T) {
 		{
 			name: "正常ケース",
 			args: args{
-				user: model.NewUser("id", "name", "email", "password"),
+				user: func() model.User {
+					mock := mock_model.NewMockUser(ctrl)
+					gomock.InOrder(
+						mock.EXPECT().ID().Return("id"),
+						mock.EXPECT().Name().Return("name"),
+						mock.EXPECT().Email().Return("email"),
+						mock.EXPECT().Password().Return("password"),
+						mock.EXPECT().Salt().Return("salt"),
+					)
+					return mock
+				}(),
 			},
 			want: &User{
 				ID:       "id",
 				Name:     "name",
 				Email:    "email",
 				Password: "password",
+				Salt:     "salt",
 			},
 		},
 	}
@@ -41,7 +58,7 @@ func TestUser_MapUserModel(t *testing.T) {
 	tests := []struct {
 		name string
 		u    *User
-		want *model.User
+		want model.User
 	}{
 		{
 			name: "正常ケース",
@@ -50,8 +67,9 @@ func TestUser_MapUserModel(t *testing.T) {
 				Name:     "name",
 				Email:    "email",
 				Password: "password",
+				Salt:     "salt",
 			},
-			want: model.NewUser("id", "name", "email", "password"),
+			want: model.NewUser("id", "name", "email", "password", "salt"),
 		},
 	}
 	for _, tt := range tests {

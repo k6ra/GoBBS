@@ -1,8 +1,9 @@
 package service
 
 import (
-	"errors"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"GoBBS/domain/model"
 	"GoBBS/domain/repository"
@@ -12,11 +13,11 @@ type (
 	// User ユーザーサービス
 	// mockgen -source domain/service/user_service.go -destination mock/mock_service/user_service_mock.go
 	User interface {
-		Authorize(email string, password string) (*model.User, error)
+		Authorize(email string, password string) (model.User, error)
 		IsDuplicate(email string) (bool, error)
-		Regist(user *model.User, now time.Time) error
-		Update(user *model.User, now time.Time) error
-		Delete(user *model.User) error
+		Regist(user model.User, now time.Time) error
+		Update(user model.User, now time.Time) error
+		Delete(user model.User) error
 	}
 
 	// UserFactory ユーザーサービスファクトリー
@@ -50,29 +51,33 @@ func (f *userServiceFactory) NewUserService(repo repository.User) User {
 }
 
 // Authorize ユーザーを認証する
-func (s *userService) Authorize(email string, password string) (*model.User, error) {
-	if user, err := s.repo.FindByEmail(email); err != nil {
-		return nil, err
-	} else if !user.VerifyPassword(password) {
-		return nil, ErrAuthorizeFail
-	} else {
-		return user, nil
+func (s *userService) Authorize(email string, password string) (model.User, error) {
+	user, err := s.repo.FindByEmail(email)
+	if err != nil {
+		return nil, errors.Wrap(err, "Authorize error")
 	}
+
+	if ok, err := user.VerifyPassword(password); err != nil {
+		return nil, errors.Wrap(err, "Authorize error")
+	} else if !ok {
+		return nil, ErrAuthorizeFail
+	}
+	return user, nil
 }
 
 // IsDuplicate 与えられたメールアドレスが登録済みか判定する
 func (s *userService) IsDuplicate(email string) (bool, error) {
 	if user, err := s.repo.FindByEmail(email); err != nil {
-		return false, err
+		return false, errors.Wrap(err, "IsDuplicate error")
 	} else {
 		return user != nil, nil
 	}
 }
 
 // Regist ユーザーを登録する
-func (s *userService) Regist(user *model.User, now time.Time) error {
+func (s *userService) Regist(user model.User, now time.Time) error {
 	if duplicate, err := s.IsDuplicate(user.Email()); err != nil {
-		return err
+		return errors.Wrap(err, "Regist error")
 	} else if duplicate {
 		return ErrUserAlreadyRegistered
 	}
@@ -81,10 +86,10 @@ func (s *userService) Regist(user *model.User, now time.Time) error {
 }
 
 // Update ユーザーを更新する
-func (s *userService) Update(user *model.User, now time.Time) error {
+func (s *userService) Update(user model.User, now time.Time) error {
 	findUser, err := s.repo.FindByEmail(user.Email())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Update error")
 	}
 	if findUser == nil {
 		return ErrUserNotFound
@@ -95,16 +100,17 @@ func (s *userService) Update(user *model.User, now time.Time) error {
 		user.Name(),
 		findUser.Email(),
 		user.Password(),
+		findUser.Salt(),
 	)
 
 	return s.repo.Update(margedUser, now)
 }
 
 // Delete ユーザーを削除する
-func (s *userService) Delete(user *model.User) error {
+func (s *userService) Delete(user model.User) error {
 	findUser, err := s.repo.FindByEmail(user.Email())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Delete error")
 	}
 	if findUser == nil {
 		return ErrUserNotFound
@@ -115,6 +121,7 @@ func (s *userService) Delete(user *model.User) error {
 		user.Name(),
 		findUser.Email(),
 		user.Password(),
+		findUser.Salt(),
 	)
 
 	return s.repo.Delete(margedUser)

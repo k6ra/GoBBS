@@ -15,7 +15,7 @@ import (
 type User interface {
 	Regist(*dto.User, time.Time) error
 	Update(*dto.User, time.Time) error
-	Authorize(email string, password string) (*model.User, error)
+	Authorize(email string, password string) (model.User, error)
 	Delete(*dto.User) error
 }
 
@@ -47,10 +47,10 @@ func (uc *userUseCase) Regist(user *dto.User, now time.Time) error {
 }
 
 // Authorize 認証する
-func (uc *userUseCase) Authorize(email string, password string) (*model.User, error) {
+func (uc *userUseCase) Authorize(email string, password string) (model.User, error) {
 	user, err := dao.ExecWithTx(
 		uc.db,
-		func(tx *sql.Tx) (*model.User, error) {
+		func(tx *sql.Tx) (model.User, error) {
 			return uc.userServiceFactory.NewUserService(dao.NewUserDAO(tx)).Authorize(email, password)
 		},
 	)

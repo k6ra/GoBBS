@@ -38,10 +38,10 @@ func (m *MockUser) EXPECT() *MockUserMockRecorder {
 }
 
 // Authorize mocks base method.
-func (m *MockUser) Authorize(email, password string) (*model.User, error) {
+func (m *MockUser) Authorize(email, password string) (model.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Authorize", email, password)
-	ret0, _ := ret[0].(*model.User)
+	ret0, _ := ret[0].(model.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -53,7 +53,7 @@ func (mr *MockUserMockRecorder) Authorize(email, password interface{}) *gomock.C
 }
 
 // Delete mocks base method.
-func (m *MockUser) Delete(user *model.User) error {
+func (m *MockUser) Delete(user model.User) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", user)
 	ret0, _ := ret[0].(error)
@@ -82,7 +82,7 @@ func (mr *MockUserMockRecorder) IsDuplicate(email interface{}) *gomock.Call {
 }
 
 // Regist mocks base method.
-func (m *MockUser) Regist(user *model.User, now time.Time) error {
+func (m *MockUser) Regist(user model.User, now time.Time) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Regist", user, now)
 	ret0, _ := ret[0].(error)
@@ -96,7 +96,7 @@ func (mr *MockUserMockRecorder) Regist(user, now interface{}) *gomock.Call {
 }
 
 // Update mocks base method.
-func (m *MockUser) Update(user *model.User, now time.Time) error {
+func (m *MockUser) Update(user model.User, now time.Time) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", user, now)
 	ret0, _ := ret[0].(error)

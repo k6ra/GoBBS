@@ -3,6 +3,7 @@ package service
 import (
 	"GoBBS/domain/model"
 	"GoBBS/domain/repository"
+	"GoBBS/mock/mock_model"
 	"GoBBS/mock/mock_repository"
 	"errors"
 	"reflect"
@@ -56,7 +57,7 @@ func Test_userService_Authorize(t *testing.T) {
 		name    string
 		s       *userService
 		args    args
-		want    *model.User
+		want    model.User
 		wantErr bool
 	}{
 		{
@@ -64,10 +65,9 @@ func Test_userService_Authorize(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						model.NewUser("id", "name", "email", "password"),
-						nil,
-					)
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().VerifyPassword(gomock.Any()).Return(true, nil)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(mockUser, nil)
 					return mock
 				}(),
 			},
@@ -75,7 +75,10 @@ func Test_userService_Authorize(t *testing.T) {
 				email:    "email",
 				password: "password",
 			},
-			want:    model.NewUser("id", "name", "email", "password"),
+			want: func() model.User {
+				mockUser := mock_model.NewMockUser(ctrl)
+				return mockUser
+			}(),
 			wantErr: false,
 		},
 		{
@@ -83,10 +86,27 @@ func Test_userService_Authorize(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						model.NewUser("id", "name", "email", "password"),
-						nil,
-					)
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().VerifyPassword(gomock.Any()).Return(false, nil)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(mockUser, nil)
+					return mock
+				}(),
+			},
+			args: args{
+				email:    "email",
+				password: "ng",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "異常ケース(パスワード検証エラー)",
+			s: &userService{
+				repo: func() *mock_repository.MockUser {
+					mock := mock_repository.NewMockUser(ctrl)
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().VerifyPassword(gomock.Any()).Return(false, errors.New("ng"))
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(mockUser, nil)
 					return mock
 				}(),
 			},
@@ -150,10 +170,8 @@ func Test_userService_IsDuplicate(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						model.NewUser("id", "name", "email", "password"),
-						nil,
-					)
+					mockUser := mock_model.NewMockUser(ctrl)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(mockUser, nil)
 					return mock
 				}(),
 			},
@@ -168,10 +186,7 @@ func Test_userService_IsDuplicate(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						nil,
-						nil,
-					)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, nil)
 					return mock
 				}(),
 			},
@@ -186,10 +201,7 @@ func Test_userService_IsDuplicate(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						nil,
-						errors.New("test"),
-					)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, errors.New("ng"))
 					return mock
 				}(),
 			},
@@ -219,7 +231,7 @@ func Test_userService_Regist(t *testing.T) {
 	defer ctrl.Finish()
 
 	type args struct {
-		user *model.User
+		user model.User
 		now  time.Time
 	}
 	tests := []struct {
@@ -241,8 +253,12 @@ func Test_userService_Regist(t *testing.T) {
 				}(),
 			},
 			args: args{
-				user: model.NewUser("id", "name", "email", "password"),
-				now:  time.Now(),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
+				now: time.Now(),
 			},
 			wantErr: false,
 		},
@@ -256,8 +272,12 @@ func Test_userService_Regist(t *testing.T) {
 				}(),
 			},
 			args: args{
-				user: model.NewUser("id", "name", "email", "password"),
-				now:  time.Now(),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
+				now: time.Now(),
 			},
 			wantErr: true,
 		},
@@ -266,13 +286,17 @@ func Test_userService_Regist(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(model.NewUser("id", "name", "email", "password"), nil)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(model.NewUser("id", "name", "email", "password", "salt"), nil)
 					return mock
 				}(),
 			},
 			args: args{
-				user: model.NewUser("id", "name", "email", "password"),
-				now:  time.Now(),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
+				now: time.Now(),
 			},
 			wantErr: true,
 		},
@@ -289,8 +313,12 @@ func Test_userService_Regist(t *testing.T) {
 				}(),
 			},
 			args: args{
-				user: model.NewUser("id", "name", "email", "password"),
-				now:  time.Now(),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
+				now: time.Now(),
 			},
 			wantErr: true,
 		},
@@ -309,7 +337,7 @@ func Test_userService_Update(t *testing.T) {
 	defer ctrl.Finish()
 
 	type args struct {
-		user *model.User
+		user model.User
 		now  time.Time
 	}
 	tests := []struct {
@@ -323,13 +351,16 @@ func Test_userService_Update(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
+					mockUser := mock_model.NewMockUser(ctrl)
 					gomock.InOrder(
-						mock.EXPECT().FindByEmail(gomock.Any()).Return(
-							model.NewUser("id", "name", "email", "password"),
-							nil,
-						),
+						mockUser.EXPECT().ID().Return("findID"),
+						mockUser.EXPECT().Email().Return("findEmail"),
+						mockUser.EXPECT().Salt().Return("findSalt"),
+					)
+					gomock.InOrder(
+						mock.EXPECT().FindByEmail(gomock.Any()).Return(mockUser, nil),
 						mock.EXPECT().Update(
-							model.NewUser("id", "nameEdit", "email", "passwordEdit"),
+							model.NewUser("findID", "name", "findEmail", "password", "findSalt"),
 							gomock.Any(),
 						).Return(nil),
 					)
@@ -337,8 +368,16 @@ func Test_userService_Update(t *testing.T) {
 				}(),
 			},
 			args: args{
-				user: model.NewUser("idEdit", "nameEdit", "email", "passwordEdit"),
-				now:  time.Now(),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					gomock.InOrder(
+						mockUser.EXPECT().Email().Return("email"),
+						mockUser.EXPECT().Name().Return("name"),
+						mockUser.EXPECT().Password().Return("password"),
+					)
+					return mockUser
+				}(),
+				now: time.Now(),
 			},
 			wantErr: false,
 		},
@@ -347,16 +386,17 @@ func Test_userService_Update(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						nil,
-						nil,
-					)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, nil)
 					return mock
 				}(),
 			},
 			args: args{
-				user: model.NewUser("id", "nameEdit", "email", "passwordEdit"),
-				now:  time.Now(),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
+				now: time.Now(),
 			},
 			wantErr: true,
 		},
@@ -373,8 +413,12 @@ func Test_userService_Update(t *testing.T) {
 				}(),
 			},
 			args: args{
-				user: model.NewUser("id", "nameEdit", "email", "passwordEdit"),
-				now:  time.Now(),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
+				now: time.Now(),
 			},
 			wantErr: true,
 		},
@@ -393,7 +437,7 @@ func Test_userService_Delete(t *testing.T) {
 	defer ctrl.Finish()
 
 	type args struct {
-		user *model.User
+		user model.User
 	}
 	tests := []struct {
 		name    string
@@ -406,18 +450,29 @@ func Test_userService_Delete(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
+					mockUser := mock_model.NewMockUser(ctrl)
 					gomock.InOrder(
-						mock.EXPECT().FindByEmail(gomock.Any()).Return(
-							model.NewUser("id", "name", "email", "password"),
-							nil,
-						),
-						mock.EXPECT().Delete(model.NewUser("id", "nameEdit", "email", "passwordEdit")).Return(nil),
+						mockUser.EXPECT().ID().Return("findID"),
+						mockUser.EXPECT().Email().Return("findEmail"),
+						mockUser.EXPECT().Salt().Return("findSalt"),
+					)
+					gomock.InOrder(
+						mock.EXPECT().FindByEmail(gomock.Any()).Return(mockUser, nil),
+						mock.EXPECT().Delete(model.NewUser("findID", "name", "findEmail", "password", "findSalt")).Return(nil),
 					)
 					return mock
 				}(),
 			},
 			args: args{
-				user: model.NewUser("idEdit", "nameEdit", "email", "passwordEdit"),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					gomock.InOrder(
+						mockUser.EXPECT().Email().Return("email"),
+						mockUser.EXPECT().Name().Return("name"),
+						mockUser.EXPECT().Password().Return("password"),
+					)
+					return mockUser
+				}(),
 			},
 			wantErr: false,
 		},
@@ -426,15 +481,16 @@ func Test_userService_Delete(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						nil,
-						nil,
-					)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, nil)
 					return mock
 				}(),
 			},
 			args: args{
-				user: model.NewUser("idEdit", "nameEdit", "email", "passwordEdit"),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
 			},
 			wantErr: true,
 		},
@@ -443,15 +499,16 @@ func Test_userService_Delete(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(
-						nil,
-						errors.New("test"),
-					)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, errors.New("ng"))
 					return mock
 				}(),
 			},
 			args: args{
-				user: model.NewUser("idEdit", "nameEdit", "email", "passwordEdit"),
+				user: func() model.User {
+					mockUser := mock_model.NewMockUser(ctrl)
+					mockUser.EXPECT().Email().Return("email")
+					return mockUser
+				}(),
 			},
 			wantErr: true,
 		},
