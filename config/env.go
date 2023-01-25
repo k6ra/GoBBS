@@ -8,6 +8,7 @@ type Env struct {
 	DBName     string
 	DBUser     string
 	DBPassword string
+	SecretKey  string
 }
 
 // 環境変数キャッシュ
@@ -24,5 +25,7 @@ func GetEnv() *Env {
 	env.DBName = os.Getenv("DB_NAME")
 	env.DBUser = os.Getenv("DB_USER")
 	env.DBPassword = os.Getenv("DB_PASSWORD")
+	env.SecretKey = os.Getenv("SECRET_KEY")
+
 	return env
 }

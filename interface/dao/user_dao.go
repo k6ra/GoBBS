@@ -78,7 +78,7 @@ func (u *UserDAO) Update(user model.User, now time.Time) error {
 	if err != nil {
 		return errors.Wrap(err, "Update error")
 	}
-	defer rows.Close()
+	rows.Close()
 
 	stmt, err := u.tx.Prepare("update user set name = ?, password = ?, updated_at = ? where id = ?")
 	if err != nil {

@@ -5,7 +5,6 @@
 package mock_usecase
 
 import (
-	model "GoBBS/domain/model"
 	dto "GoBBS/dto"
 	reflect "reflect"
 	time "time"
@@ -37,10 +36,10 @@ func (m *MockUser) EXPECT() *MockUserMockRecorder {
 }
 
 // Authorize mocks base method.
-func (m *MockUser) Authorize(email, password string) (model.User, error) {
+func (m *MockUser) Authorize(email, password string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Authorize", email, password)
-	ret0, _ := ret[0].(model.User)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -91,4 +90,18 @@ func (m *MockUser) Update(arg0 *dto.User, arg1 time.Time) error {
 func (mr *MockUserMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUser)(nil).Update), arg0, arg1)
+}
+
+// VerifyAuthorization mocks base method.
+func (m *MockUser) VerifyAuthorization(token, userID string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyAuthorization", token, userID)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// VerifyAuthorization indicates an expected call of VerifyAuthorization.
+func (mr *MockUserMockRecorder) VerifyAuthorization(token, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAuthorization", reflect.TypeOf((*MockUser)(nil).VerifyAuthorization), token, userID)
 }

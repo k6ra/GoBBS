@@ -8,6 +8,7 @@ import (
 	"GoBBS/domain/service"
 	"GoBBS/dto"
 	"GoBBS/interface/dao"
+	"GoBBS/interface/security"
 )
 
 // User ユーザーユースケース
@@ -15,22 +16,25 @@ import (
 type User interface {
 	Regist(*dto.User, time.Time) error
 	Update(*dto.User, time.Time) error
-	Authorize(email string, password string) (model.User, error)
+	Authorize(email string, password string) (string, error)
+	VerifyAuthorization(token string, userID string) bool
 	Delete(*dto.User) error
 }
 
 type userUseCase struct {
 	db                 *sql.DB
 	userServiceFactory service.UserFactory
+	token              security.Token
 }
 
 var _ User = (*userUseCase)(nil)
 
 // NewUserUseCase ユーザーユースケースを生成する
-func NewUserUseCase(db *sql.DB, f service.UserFactory) *userUseCase {
+func NewUserUseCase(db *sql.DB, f service.UserFactory, t security.Token) *userUseCase {
 	return &userUseCase{
 		db:                 db,
 		userServiceFactory: f,
+		token:              t,
 	}
 }
 
@@ -47,7 +51,7 @@ func (uc *userUseCase) Regist(user *dto.User, now time.Time) error {
 }
 
 // Authorize 認証する
-func (uc *userUseCase) Authorize(email string, password string) (model.User, error) {
+func (uc *userUseCase) Authorize(email string, password string) (string, error) {
 	user, err := dao.ExecWithTx(
 		uc.db,
 		func(tx *sql.Tx) (model.User, error) {
@@ -55,7 +59,21 @@ func (uc *userUseCase) Authorize(email string, password string) (model.User, err
 		},
 	)
 
-	return user, err
+	if err != nil {
+		return "", err
+	}
+
+	token, err := uc.token.Generate(user.ID(), time.Now())
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+// VerifyAuthorization トークンを検証する
+func (uc *userUseCase) VerifyAuthorization(token string, userID string) bool {
+	return uc.token.Verify(token, userID)
 }
 
 // Update 更新する

@@ -4,6 +4,7 @@ import (
 	"GoBBS/config"
 	"GoBBS/domain/service"
 	"GoBBS/interface/handler"
+	"GoBBS/interface/security"
 	"GoBBS/usecase"
 	"database/sql"
 	"fmt"
@@ -28,8 +29,12 @@ func main() {
 	}
 	defer db.Close()
 
-	usecase := usecase.NewUserUseCase(db, service.NewUserServiceFactory())
-	handler.NewUserHandler(usecase).RegistUserHandlerFunc()
+	usecase := usecase.NewUserUseCase(
+		db,
+		service.NewUserServiceFactory(),
+		security.NewJWTToken(env.SecretKey),
+	)
+	handler.NewUserHandler(usecase).RegistHandlerFunc()
 
 	log.Fatal(http.ListenAndServe(":8100", nil))
 }
