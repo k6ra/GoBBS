@@ -93,7 +93,6 @@ func Test_jwtToken_Generate(t *testing.T) {
 func Test_jwtToken_Verify(t *testing.T) {
 	type args struct {
 		tokenString string
-		userID      string
 	}
 	tests := []struct {
 		name string
@@ -109,7 +108,6 @@ func Test_jwtToken_Verify(t *testing.T) {
 			},
 			args: args{
 				tokenString: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsImlkIjoidWlkIn0.KtfT-8QDcz5zzOGxYdfB5cHorDrtWuY1EOmJFlXRiOo",
-				userID:      "uid",
 			},
 			want: true,
 		},
@@ -121,7 +119,6 @@ func Test_jwtToken_Verify(t *testing.T) {
 			},
 			args: args{
 				tokenString: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NzI1MzQ4MDAsImlkIjoidWlkIn0.hzK_r1gcKXyNeKi-lp3Kk0TKCP5EKeCiDUNgMpptZ3g",
-				userID:      "uid",
 			},
 			want: false,
 		},
@@ -133,26 +130,13 @@ func Test_jwtToken_Verify(t *testing.T) {
 			},
 			args: args{
 				tokenString: "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NzI1MzQ4MDAsImlkIjoidWlkIn0.JXwNXypso6L53JDS0BH8RjY99QzaIMlNlnW9uCVbrMQ5wkpNqwT1-84pD9YEwWASlfWyCSJrnGINmNQfU07GbA",
-				userID:      "uid",
-			},
-			want: false,
-		},
-		{
-			name: "検証失敗(id不一致)",
-			j: &jwtToken{
-				secretKey:     "key",
-				signingMethod: jwt.SigningMethodHS256,
-			},
-			args: args{
-				tokenString: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsImp0aSI6InVpZCJ9.txa8RkeQiq_BJRBWlI2WdKrGih6HXe5narIKQwm1-no",
-				userID:      "ng",
 			},
 			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.j.Verify(tt.args.tokenString, tt.args.userID); got != tt.want {
+			if got := tt.j.Verify(tt.args.tokenString); got != tt.want {
 				t.Errorf("jwtToken.Verify() = %v, want %v", got, tt.want)
 			}
 		})

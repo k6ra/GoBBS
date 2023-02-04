@@ -50,15 +50,15 @@ func (mr *MockTokenMockRecorder) Generate(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Verify mocks base method.
-func (m *MockToken) Verify(arg0, arg1 string) bool {
+func (m *MockToken) Verify(arg0 string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Verify", arg0, arg1)
+	ret := m.ctrl.Call(m, "Verify", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // Verify indicates an expected call of Verify.
-func (mr *MockTokenMockRecorder) Verify(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockTokenMockRecorder) Verify(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockToken)(nil).Verify), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockToken)(nil).Verify), arg0)
 }

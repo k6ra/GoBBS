@@ -395,7 +395,7 @@ func Test_userUseCase_VerifyAuthorization(t *testing.T) {
 			uc: &userUseCase{
 				token: func() *mock_security.MockToken {
 					mock := mock_security.NewMockToken(ctrl)
-					mock.EXPECT().Verify(gomock.Any(), gomock.Any()).Return(true)
+					mock.EXPECT().Verify(gomock.Any()).Return(true)
 					return mock
 				}(),
 			},
@@ -410,7 +410,7 @@ func Test_userUseCase_VerifyAuthorization(t *testing.T) {
 			uc: &userUseCase{
 				token: func() *mock_security.MockToken {
 					mock := mock_security.NewMockToken(ctrl)
-					mock.EXPECT().Verify(gomock.Any(), gomock.Any()).Return(false)
+					mock.EXPECT().Verify(gomock.Any()).Return(false)
 					return mock
 				}(),
 			},
@@ -423,7 +423,7 @@ func Test_userUseCase_VerifyAuthorization(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.uc.VerifyAuthorization(tt.args.token, tt.args.userID); got != tt.want {
+			if got := tt.uc.VerifyAuthorization(tt.args.token); got != tt.want {
 				t.Errorf("userUseCase.VerifyAuthorization() = %v, want %v", got, tt.want)
 			}
 		})

@@ -93,15 +93,15 @@ func (mr *MockUserMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // VerifyAuthorization mocks base method.
-func (m *MockUser) VerifyAuthorization(token, userID string) bool {
+func (m *MockUser) VerifyAuthorization(token string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyAuthorization", token, userID)
+	ret := m.ctrl.Call(m, "VerifyAuthorization", token)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // VerifyAuthorization indicates an expected call of VerifyAuthorization.
-func (mr *MockUserMockRecorder) VerifyAuthorization(token, userID interface{}) *gomock.Call {
+func (mr *MockUserMockRecorder) VerifyAuthorization(token interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAuthorization", reflect.TypeOf((*MockUser)(nil).VerifyAuthorization), token, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAuthorization", reflect.TypeOf((*MockUser)(nil).VerifyAuthorization), token)
 }

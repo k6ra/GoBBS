@@ -17,7 +17,7 @@ type User interface {
 	Regist(*dto.User, time.Time) error
 	Update(*dto.User, time.Time) error
 	Authorize(email string, password string) (string, error)
-	VerifyAuthorization(token string, userID string) bool
+	VerifyAuthorization(token string) bool
 	Delete(*dto.User) error
 }
 
@@ -72,8 +72,8 @@ func (uc *userUseCase) Authorize(email string, password string) (string, error) 
 }
 
 // VerifyAuthorization トークンを検証する
-func (uc *userUseCase) VerifyAuthorization(token string, userID string) bool {
-	return uc.token.Verify(token, userID)
+func (uc *userUseCase) VerifyAuthorization(token string) bool {
+	return uc.token.Verify(token)
 }
 
 // Update 更新する

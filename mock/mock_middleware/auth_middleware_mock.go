@@ -5,7 +5,7 @@
 package mock_middleware
 
 import (
-	http "net/http"
+	middlewarehelper "GoBBS/interface/middleware/middlewarehelper"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -35,15 +35,15 @@ func (m *MockAuth) EXPECT() *MockAuthMockRecorder {
 }
 
 // VerifyAuth mocks base method.
-func (m *MockAuth) VerifyAuth(arg0 http.Header, arg1 string) bool {
+func (m *MockAuth) VerifyAuth(arg0 middlewarehelper.HandlerFunc) middlewarehelper.HandlerFunc {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyAuth", arg0, arg1)
-	ret0, _ := ret[0].(bool)
+	ret := m.ctrl.Call(m, "VerifyAuth", arg0)
+	ret0, _ := ret[0].(middlewarehelper.HandlerFunc)
 	return ret0
 }
 
 // VerifyAuth indicates an expected call of VerifyAuth.
-func (mr *MockAuthMockRecorder) VerifyAuth(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockAuthMockRecorder) VerifyAuth(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAuth", reflect.TypeOf((*MockAuth)(nil).VerifyAuth), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAuth", reflect.TypeOf((*MockAuth)(nil).VerifyAuth), arg0)
 }

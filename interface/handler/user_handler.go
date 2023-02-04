@@ -5,14 +5,15 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 
 	"GoBBS/domain/service"
 	"GoBBS/dto"
+	"GoBBS/interface/handler/handlerctx"
 	"GoBBS/interface/middleware"
+	"GoBBS/interface/middleware/middlewarehelper"
 	"GoBBS/usecase"
 )
 
@@ -33,144 +34,162 @@ func NewUserHandler(usecase usecase.User) *userHandler {
 
 // RegistUserHandler ハンドラー登録
 func (h *userHandler) RegistHandlerFunc() {
-	http.HandleFunc("/users", h.new)
-	http.HandleFunc("/users/", h.edit)
-	http.HandleFunc("/login", h.auth)
+	http.HandleFunc(
+		"/users",
+		middlewarehelper.Apply(
+			handlerctx.NewAPIContext,
+			h.new,
+		),
+	)
+
+	http.HandleFunc(
+		"/users/",
+		middlewarehelper.Apply(
+			handlerctx.NewAPIContext,
+			h.edit,
+			middleware.NewAuth(h.uc).VerifyAuth,
+			middleware.NewPathParam("/users/:id").Parse,
+		),
+	)
+
+	http.HandleFunc(
+		"/login",
+		middlewarehelper.Apply(
+			handlerctx.NewAPIContext,
+			h.auth,
+		),
+	)
 }
 
 // new 新規作成
-func (h *userHandler) new(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserFromReqBody(r.Body)
+func (h *userHandler) new(c handlerctx.APIContext) error {
+	user, err := h.getUserFromReqBody(c.RequestBody())
 	if err != nil {
 		log.Printf("get user error : %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		c.WriteStatusCode(http.StatusBadRequest)
+		return nil
 	}
 
-	switch r.Method {
+	switch c.RequestMethod() {
 	case http.MethodPost:
-		h.regist(w, user)
+		h.regist(c, user)
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		c.WriteStatusCode(http.StatusMethodNotAllowed)
 	}
+
+	return nil
 }
 
 // edit 編集
-func (h *userHandler) edit(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserFromReqBody(r.Body)
+func (h *userHandler) edit(c handlerctx.APIContext) error {
+	user, err := h.getUserFromReqBody(c.RequestBody())
 	if err != nil {
 		log.Printf("get user error : %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		c.WriteStatusCode(http.StatusBadRequest)
+		return nil
 	}
 
-	userID := h.getUserIDFromPathParam(r.URL.Path)
+	userID := c.PathParam()
 	if userID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		c.WriteStatusCode(http.StatusBadRequest)
+		return nil
 	}
 	user.ID = userID
 
-	switch r.Method {
+	switch c.RequestMethod() {
 	case http.MethodPut:
-		if !h.authMiddleware.VerifyAuth(r.Header, user.ID) {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		h.update(w, user)
+		h.update(c, user)
 	case http.MethodDelete:
-		if !h.authMiddleware.VerifyAuth(r.Header, user.ID) {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		h.delete(w, user)
+		h.delete(c, user)
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		c.WriteStatusCode(http.StatusMethodNotAllowed)
 	}
+
+	return nil
 }
 
 // login ログインハンドラー
-func (h *userHandler) auth(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserFromReqBody(r.Body)
+func (h *userHandler) auth(c handlerctx.APIContext) error {
+	user, err := h.getUserFromReqBody(c.RequestBody())
 	if err != nil {
 		log.Printf("get user error : %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		c.WriteStatusCode(http.StatusBadRequest)
+		return nil
 	}
 
-	switch r.Method {
+	switch c.RequestMethod() {
 	case http.MethodPost:
-		h.login(w, user)
+		return h.login(c, user)
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		c.WriteStatusCode(http.StatusMethodNotAllowed)
 	}
+
+	return nil
 }
 
 // regist ユーザー登録
-func (h *userHandler) regist(w http.ResponseWriter, user dto.User) {
+func (h *userHandler) regist(c handlerctx.APIContext, user dto.User) {
 	if err := h.uc.Regist(&user, time.Now()); err != nil {
 		log.Printf("regist error : %v", err)
 		if errors.Is(err, service.ErrUserAlreadyRegistered) {
-			w.WriteHeader(http.StatusBadRequest)
+			c.WriteStatusCode(http.StatusBadRequest)
 			return
 		}
-		w.WriteHeader(http.StatusInternalServerError)
+		c.WriteStatusCode(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	c.WriteStatusCode(http.StatusOK)
 }
 
 // update ユーザー更新
-func (h *userHandler) update(w http.ResponseWriter, user dto.User) {
+func (h *userHandler) update(c handlerctx.APIContext, user dto.User) {
 	if err := h.uc.Update(&user, time.Now()); err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
-			w.WriteHeader(http.StatusBadRequest)
+			c.WriteStatusCode(http.StatusBadRequest)
 			return
 		}
 		log.Printf("update error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		c.WriteStatusCode(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	c.WriteStatusCode(http.StatusOK)
 }
 
 // delete ユーザー削除
-func (h *userHandler) delete(w http.ResponseWriter, user dto.User) {
+func (h *userHandler) delete(c handlerctx.APIContext, user dto.User) {
 	if err := h.uc.Delete(&user); err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
-			w.WriteHeader(http.StatusBadRequest)
+			c.WriteStatusCode(http.StatusBadRequest)
 			return
 		}
 
 		log.Printf("delete error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		c.WriteStatusCode(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	c.WriteStatusCode(http.StatusOK)
 }
 
 // login ログイン
-func (h *userHandler) login(w http.ResponseWriter, user dto.User) {
+func (h *userHandler) login(c handlerctx.APIContext, user dto.User) error {
 	token, err := h.uc.Authorize(user.Email, user.Password)
 	if err != nil {
 		log.Printf("login authorize error: %v", err)
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+		c.WriteStatusCode(http.StatusUnauthorized)
+		return nil
 	}
 
 	jsonToken, err := h.jsonMarshal(dto.NewToken(token))
 	if err != nil {
 		log.Printf("login token marshal error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		c.WriteStatusCode(http.StatusInternalServerError)
+		return nil
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(jsonToken)
+	return c.WriteResponseJSON(http.StatusOK, jsonToken)
 }
 
 // getUserFromReqBody リクエストボディからユーザー情報を取得する
@@ -179,14 +198,4 @@ func (h *userHandler) getUserFromReqBody(body io.ReadCloser) (dto.User, error) {
 	err := json.NewDecoder(body).Decode(&user)
 
 	return user, err
-}
-
-// getUserIDFromPathParam パスからユーザーIDを取得する
-func (h *userHandler) getUserIDFromPathParam(path string) string {
-	subPath := strings.Split(path, "/")
-	if len(subPath) != 3 {
-		return ""
-	}
-
-	return subPath[2]
 }

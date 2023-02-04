@@ -13,7 +13,7 @@ type (
 	// mockgen -source interface/security/jwt_token.go -destination mock/mock_security/jwt_token_mock.go
 	Token interface {
 		Generate(string, time.Time) (string, error)
-		Verify(string, string) bool
+		Verify(string) bool
 	}
 
 	// jwtToken jwtトークン
@@ -51,26 +51,13 @@ func (j *jwtToken) Generate(userID string, now time.Time) (string, error) {
 }
 
 // Verify トークンを検証する
-func (j *jwtToken) Verify(tokenString string, userID string) bool {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+func (j *jwtToken) Verify(tokenString string) bool {
+	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if !(token.Method.Alg() == j.signingMethod.Alg()) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Method.Alg())
 		}
 		return []byte(j.secretKey), nil
 	})
 
-	if err != nil {
-		return false
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return false
-	}
-
-	if claims["id"] != userID {
-		return false
-	}
-
-	return true
+	return err == nil
 }

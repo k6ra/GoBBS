@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"GoBBS/interface/handler/handlerctx"
+	"GoBBS/interface/middleware/middlewarehelper"
+	"GoBBS/mock/mock_handler/mock_handlerctx"
 	"GoBBS/mock/mock_usecase"
 	"GoBBS/usecase"
 	"net/http"
@@ -49,70 +52,115 @@ func Test_auth_VerifyAuth(t *testing.T) {
 	defer ctrl.Finish()
 
 	type args struct {
-		header http.Header
-		userID string
+		next middlewarehelper.HandlerFunc
 	}
 	tests := []struct {
-		name string
-		m    *auth
-		args args
-		want bool
+		name        string
+		m           *auth
+		args        args
+		ctx         handlerctx.APIContext
+		wantFuncErr bool
 	}{
 		{
 			name: "正常ケース",
 			m: &auth{
 				uc: func() *mock_usecase.MockUser {
 					mock := mock_usecase.NewMockUser(ctrl)
-					mock.EXPECT().VerifyAuthorization(gomock.Any(), gomock.Any()).Return(true)
+					mock.EXPECT().VerifyAuthorization(gomock.Any()).Return(true)
 					return mock
 				}(),
 			},
 			args: args{
-				header: map[string][]string{
-					"Authorization": {"Bearer abc"},
-				},
+				next: func() middlewarehelper.HandlerFunc {
+					return func(c handlerctx.APIContext) error {
+						return nil
+					}
+				}(),
 			},
-			want: true,
+			ctx: func() *mock_handlerctx.MockAPIContext {
+				mock := mock_handlerctx.NewMockAPIContext(ctrl)
+				header := http.Header{"Authorization": {"Bearer abc"}}
+				mock.EXPECT().RequestHeader().Return(header)
+				return mock
+			}(),
+			wantFuncErr: false,
 		},
 		{
-			name: "認証エラーケース",
+			name: "異常ケース(認証失敗)",
 			m: &auth{
 				uc: func() *mock_usecase.MockUser {
 					mock := mock_usecase.NewMockUser(ctrl)
-					mock.EXPECT().VerifyAuthorization(gomock.Any(), gomock.Any()).Return(false)
+					mock.EXPECT().VerifyAuthorization(gomock.Any()).Return(false)
 					return mock
 				}(),
 			},
 			args: args{
-				header: map[string][]string{
-					"Authorization": {"Bearer abc"},
-				},
+				next: func() middlewarehelper.HandlerFunc {
+					return func(c handlerctx.APIContext) error {
+						return nil
+					}
+				}(),
 			},
-			want: false,
+			ctx: func() *mock_handlerctx.MockAPIContext {
+				mock := mock_handlerctx.NewMockAPIContext(ctrl)
+				header := http.Header{"Authorization": {"Bearer abc"}}
+				gomock.InOrder(
+					mock.EXPECT().RequestHeader().Return(header),
+					mock.EXPECT().WriteStatusCode(http.StatusUnauthorized),
+				)
+				return mock
+			}(),
+			wantFuncErr: false,
 		},
 		{
-			name: "AuthorizationヘッダBearerなしケース",
+			name: "異常ケース(AuthorizationヘッダーがBearerで始まらない)",
 			m:    &auth{},
 			args: args{
-				header: map[string][]string{
-					"Authorization": {""},
-				},
+				next: func() middlewarehelper.HandlerFunc {
+					return func(c handlerctx.APIContext) error {
+						return nil
+					}
+				}(),
 			},
-			want: false,
+			ctx: func() *mock_handlerctx.MockAPIContext {
+				mock := mock_handlerctx.NewMockAPIContext(ctrl)
+				header := http.Header{"Authorization": {"abc"}}
+				gomock.InOrder(
+					mock.EXPECT().RequestHeader().Return(header),
+					mock.EXPECT().WriteStatusCode(http.StatusUnauthorized),
+				)
+				return mock
+			}(),
+			wantFuncErr: false,
 		},
 		{
-			name: "Authorizationヘッダなしケース",
+			name: "異常ケース(Authorizationヘッダーがない)",
 			m:    &auth{},
 			args: args{
-				header: map[string][]string{},
+				next: func() middlewarehelper.HandlerFunc {
+					return func(c handlerctx.APIContext) error {
+						return nil
+					}
+				}(),
 			},
-			want: false,
+			ctx: func() *mock_handlerctx.MockAPIContext {
+				mock := mock_handlerctx.NewMockAPIContext(ctrl)
+				header := http.Header{}
+				gomock.InOrder(
+					mock.EXPECT().RequestHeader().Return(header),
+					mock.EXPECT().WriteStatusCode(http.StatusUnauthorized),
+				)
+				return mock
+			}(),
+			wantFuncErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.m.VerifyAuth(tt.args.header, tt.args.userID); got != tt.want {
-				t.Errorf("auth.VerifyAuth() = %v, want %v", got, tt.want)
+			got := tt.m.VerifyAuth(tt.args.next)
+			err := got(tt.ctx)
+			if (err != nil) != tt.wantFuncErr {
+				t.Errorf("auth.VerifyAuth() error = %v, want %v", err, tt.wantFuncErr)
 			}
 		})
 	}
