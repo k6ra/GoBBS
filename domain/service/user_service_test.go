@@ -186,7 +186,7 @@ func Test_userService_IsDuplicate(t *testing.T) {
 			s: &userService{
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
-					mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, nil)
+					mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, repository.ErrUserNotFound)
 					return mock
 				}(),
 			},
@@ -246,7 +246,7 @@ func Test_userService_Regist(t *testing.T) {
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
 					gomock.InOrder(
-						mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, nil),
+						mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, repository.ErrUserNotFound),
 						mock.EXPECT().Regist(gomock.Any(), gomock.Any()).Return(nil),
 					)
 					return mock
@@ -306,7 +306,7 @@ func Test_userService_Regist(t *testing.T) {
 				repo: func() *mock_repository.MockUser {
 					mock := mock_repository.NewMockUser(ctrl)
 					gomock.InOrder(
-						mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, nil),
+						mock.EXPECT().FindByEmail(gomock.Any()).Return(nil, repository.ErrUserNotFound),
 						mock.EXPECT().Regist(gomock.Any(), gomock.Any()).Return(errors.New("test")),
 					)
 					return mock

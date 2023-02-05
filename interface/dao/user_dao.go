@@ -40,7 +40,7 @@ func (u *UserDAO) FindByEmail(email string) (model.User, error) {
 		}
 		return user.MapUserModel(), nil
 	}
-	return nil, nil
+	return nil, repository.ErrUserNotFound
 }
 
 // Regist ユーザーを登録する

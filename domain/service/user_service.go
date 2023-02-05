@@ -67,11 +67,13 @@ func (s *userService) Authorize(email string, password string) (model.User, erro
 
 // IsDuplicate 与えられたメールアドレスが登録済みか判定する
 func (s *userService) IsDuplicate(email string) (bool, error) {
-	if user, err := s.repo.FindByEmail(email); err != nil {
+	if _, err := s.repo.FindByEmail(email); err == repository.ErrUserNotFound {
+		return false, nil
+	} else if err != nil {
 		return false, errors.Wrap(err, "IsDuplicate error")
-	} else {
-		return user != nil, nil
 	}
+
+	return true, nil
 }
 
 // Regist ユーザーを登録する

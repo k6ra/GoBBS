@@ -2,7 +2,12 @@ package repository
 
 import (
 	"GoBBS/domain/model"
+	"errors"
 	"time"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 // User ユーザーリポジトリ

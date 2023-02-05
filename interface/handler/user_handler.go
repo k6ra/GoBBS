@@ -20,7 +20,6 @@ import (
 type userHandler struct {
 	uc             usecase.User
 	authMiddleware middleware.Auth
-	jsonMarshal    func(any) ([]byte, error)
 }
 
 // NewUserHandler ユーザーハンドラーを生成する
@@ -28,7 +27,6 @@ func NewUserHandler(usecase usecase.User) *userHandler {
 	return &userHandler{
 		uc:             usecase,
 		authMiddleware: middleware.NewAuth(usecase),
-		jsonMarshal:    json.Marshal,
 	}
 }
 
@@ -182,13 +180,7 @@ func (h *userHandler) login(c handlerctx.APIContext, user dto.User) error {
 		return nil
 	}
 
-	jsonToken, err := h.jsonMarshal(dto.NewToken(token))
-	if err != nil {
-		log.Printf("login token marshal error: %v", err)
-		c.WriteStatusCode(http.StatusInternalServerError)
-		return nil
-	}
-
+	jsonToken := dto.NewToken(token)
 	return c.WriteResponseJSON(http.StatusOK, jsonToken)
 }
 

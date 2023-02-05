@@ -2,6 +2,7 @@ package dao
 
 import (
 	"GoBBS/domain/model"
+	"GoBBS/domain/repository"
 	"GoBBS/mock/mock_model"
 	"database/sql"
 	"errors"
@@ -98,7 +99,7 @@ func TestUserDAO_FindByEmailNotFound(t *testing.T) {
 
 	dao := NewUserDAO(tx)
 	got, err := dao.FindByEmail("email")
-	if err != nil {
+	if err != repository.ErrUserNotFound {
 		t.Errorf("予期せぬエラー(error: %s)", err)
 	}
 
