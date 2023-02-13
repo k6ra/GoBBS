@@ -25,7 +25,11 @@ func TestNewUserHandler(t *testing.T) {
 	mockUC := mock_usecase.NewMockUser(ctrl)
 
 	type args struct {
-		usecase usecase.User
+		usecase          usecase.User
+		corsAllowOrigin  string
+		corsAllowMethods []string
+		corsAllowHeaders []string
+		corsAllowMaxAge  int
 	}
 	tests := []struct {
 		name string
@@ -35,17 +39,25 @@ func TestNewUserHandler(t *testing.T) {
 		{
 			name: "正常ケース",
 			args: args{
-				usecase: mockUC,
+				usecase:          mockUC,
+				corsAllowOrigin:  "a",
+				corsAllowMethods: []string{"b", "c"},
+				corsAllowHeaders: []string{"d", "e"},
+				corsAllowMaxAge:  1,
 			},
 			want: &userHandler{
-				uc:             mockUC,
-				authMiddleware: middleware.NewAuth(mockUC),
+				uc:               mockUC,
+				authMiddleware:   middleware.NewAuth(mockUC),
+				corsAllowOrigin:  "a",
+				corsAllowMethods: []string{"b", "c"},
+				corsAllowHeaders: []string{"d", "e"},
+				corsAllowMaxAge:  1,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewUserHandler(tt.args.usecase); !reflect.DeepEqual(got, tt.want) {
+			if got := NewUserHandler(tt.args.usecase, tt.args.corsAllowOrigin, tt.args.corsAllowMethods, tt.args.corsAllowHeaders, tt.args.corsAllowMaxAge); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewUserHandler() = %v, want %v", got, tt.want)
 			}
 		})

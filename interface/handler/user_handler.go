@@ -18,15 +18,28 @@ import (
 )
 
 type userHandler struct {
-	uc             usecase.User
-	authMiddleware middleware.Auth
+	corsAllowOrigin  string
+	corsAllowMethods []string
+	corsAllowHeaders []string
+	corsAllowMaxAge  int
+	uc               usecase.User
+	authMiddleware   middleware.Auth
 }
 
 // NewUserHandler ユーザーハンドラーを生成する
-func NewUserHandler(usecase usecase.User) *userHandler {
+func NewUserHandler(
+	usecase usecase.User,
+	corsAllowOrigin string,
+	corsAllowMethods []string,
+	corsAllowHeaders []string,
+	corsAllowMaxAge int) *userHandler {
 	return &userHandler{
-		uc:             usecase,
-		authMiddleware: middleware.NewAuth(usecase),
+		corsAllowOrigin:  corsAllowOrigin,
+		corsAllowMethods: corsAllowMethods,
+		corsAllowHeaders: corsAllowHeaders,
+		corsAllowMaxAge:  corsAllowMaxAge,
+		uc:               usecase,
+		authMiddleware:   middleware.NewAuth(usecase),
 	}
 }
 
@@ -37,6 +50,12 @@ func (h *userHandler) RegistHandlerFunc() {
 		middlewarehelper.Apply(
 			handlerctx.NewAPIContext,
 			h.new,
+			middleware.NewCORS(
+				h.corsAllowOrigin,
+				h.corsAllowMethods,
+				h.corsAllowHeaders,
+				h.corsAllowMaxAge,
+			).AddResponseHeader,
 		),
 	)
 

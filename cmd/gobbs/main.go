@@ -15,13 +15,16 @@ import (
 )
 
 func main() {
-	env := config.GetEnv()
+	env, err := config.GetEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?parseTime=true",
-		env.DBUser,
-		env.DBPassword,
-		env.DBHost,
-		env.DBName,
+		env.DBUser(),
+		env.DBPassword(),
+		env.DBHost(),
+		env.DBName(),
 	)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
@@ -32,9 +35,15 @@ func main() {
 	usecase := usecase.NewUserUseCase(
 		db,
 		service.NewUserServiceFactory(),
-		security.NewJWTToken(env.SecretKey),
+		security.NewJWTToken(env.JWTSecretKey()),
 	)
-	handler.NewUserHandler(usecase).RegistHandlerFunc()
+	handler.NewUserHandler(
+		usecase,
+		env.CORSAllowOrigin(),
+		env.CORSAllowMethods(),
+		env.CORSAllowHeaders(),
+		env.CORSMaxAge(),
+	).RegistHandlerFunc()
 
 	log.Fatal(http.ListenAndServe(":8100", nil))
 }

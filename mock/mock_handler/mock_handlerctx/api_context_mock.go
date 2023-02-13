@@ -36,6 +36,18 @@ func (m *MockAPIContext) EXPECT() *MockAPIContextMockRecorder {
 	return m.recorder
 }
 
+// AddResponseHeader mocks base method.
+func (m *MockAPIContext) AddResponseHeader(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddResponseHeader", arg0, arg1)
+}
+
+// AddResponseHeader indicates an expected call of AddResponseHeader.
+func (mr *MockAPIContextMockRecorder) AddResponseHeader(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddResponseHeader", reflect.TypeOf((*MockAPIContext)(nil).AddResponseHeader), arg0, arg1)
+}
+
 // PathParam mocks base method.
 func (m *MockAPIContext) PathParam() string {
 	m.ctrl.T.Helper()

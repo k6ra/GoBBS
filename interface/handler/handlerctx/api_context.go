@@ -19,6 +19,7 @@ type (
 		URL() *url.URL
 		RequestBody() io.ReadCloser
 		RequestMethod() string
+		AddResponseHeader(string, string)
 	}
 
 	// APIContextFactory APIコンテキストファクトリー
@@ -91,4 +92,9 @@ func (c *apiContext) RequestBody() io.ReadCloser {
 // RequestMethod リクエストメソッドを変えs
 func (c *apiContext) RequestMethod() string {
 	return c.request.Method
+}
+
+// AddResponseHeader レスポンスヘッダを追加する
+func (c *apiContext) AddResponseHeader(key string, value string) {
+	c.response.Header().Add(key, value)
 }

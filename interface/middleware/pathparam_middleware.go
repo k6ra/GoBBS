@@ -21,6 +21,8 @@ type (
 	}
 )
 
+var _ PathParam = (*pathParam)(nil)
+
 const paramPrefix = ":"
 
 // NewPathParam パスパラメータミドルウェアを生成する

@@ -330,3 +330,40 @@ func Test_apiContext_RequestMethod(t *testing.T) {
 		})
 	}
 }
+
+func Test_apiContext_AddResponseHeader(t *testing.T) {
+	type args struct {
+		key   string
+		value string
+	}
+	tests := []struct {
+		name               string
+		c                  *apiContext
+		args               args
+		wantResponseHeader http.Header
+	}{
+		{
+			name: "正常ケース",
+			c: &apiContext{
+				response: httptest.NewRecorder(),
+			},
+			args: args{
+				key:   "key",
+				value: "value",
+			},
+			wantResponseHeader: http.Header{
+				"Key": {"value"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.c.AddResponseHeader(tt.args.key, tt.args.value)
+
+			if !reflect.DeepEqual(tt.c.response.Header(), tt.wantResponseHeader) {
+				t.Errorf("apiContext.AddResponseHeader() = %v, want %v", tt.c.response.Header(), tt.wantResponseHeader)
+
+			}
+		})
+	}
+}
